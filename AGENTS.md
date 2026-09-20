@@ -76,13 +76,13 @@ gods-eye-view/
 - **CCTV 台灣國道包預設載入 220 支**（全量約 1,850），以台北／台中／高雄／新竹為錨點就近挑選，沙鹿周邊會拿到 29 支。要更多設 `CCTV_FREEWAY_TW_MAX_SOURCES`（上限 400）。
 - **追上游流程**：`git fetch upstream && git merge upstream/main`。合併後務必重跑 `npm test`，並確認在地化字串沒有被上游改動覆蓋。
 - **`handoff.md` 不進 repo**：本專案是 **public fork**，且會持續 merge upstream。`handoff.md` 列在 `.gitignore` **檔尾的「本 fork 專屬」區段**。2026-09-20 從 `.git/info/exclude` 改過來——後者是本機設定、**不隨 git 走**，換電腦 clone 後就失效，而這個 repo 是公開的，漏進去就推上去了。放檔尾是為了避開上游常改動的區段，把 merge 衝突面降到最低。
-- **本專案不在雲端硬碟**（路徑為 `C:\dev\gods-eye-view`），故 `handoff.md` **不會自動跨電腦同步**。換電腦接手請以 Obsidian（L3）的〈專案工作流程〉為準。
+- **本專案在雲端硬碟裡**（`我的雲端硬碟/agents/gods-eye-view`，2026-09-20 由 `C:\dev\` 刻意搬入），因此 `handoff.md` 會跟其他專案一樣自動跨電腦同步，不必再靠 Obsidian 轉手。搬進來之後**適用雲端硬碟的三條共同規則**：①**禁止純大小寫改名**（Google 雲端硬碟套用不了，另一台會收到「舊檔被刪＋`X (1).md`」，必要時走兩段式改名）；②狀態**一律以 git 為準**，不以檔案內容或時間戳為準（`git status` 出現 `MM` 但 `git diff HEAD` 為空時只是 LF/CRLF 差異，`git add --renormalize .` 可消除）；③`.gitignore` **擋得住 git、擋不住雲端硬碟**——`node_modules/`（約 214 MB）、`dist/`、`.gev-cache/` 仍會整包上傳同步。
 
 ## 同步層級（本專案初始化至第 3 層級）
 
 | 層級 | 平台 | 位置 | 讀取時機 |
 |------|------|------|---------|
-| L1 | 本地 | `AGENTS.md`＋`handoff.md`（不進 git）＋`CLAUDE.md`（橋接） | 每個 session |
+| L1 | 本地（GDrive 同步） | `AGENTS.md`＋`handoff.md`（不進 git）＋`CLAUDE.md`（橋接） | 每個 session |
 | L2 | GitHub | [changyiwu/gods-eye-view](https://github.com/changyiwu/gods-eye-view)（**公開** fork；upstream 為 bilawalsidhu/gods-eye-view） | 指定時 |
 | L3 | Obsidian | `gods-eye-view/專案工作流程.md` | 有需要時 |
 
