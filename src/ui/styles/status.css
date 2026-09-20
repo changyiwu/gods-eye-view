@@ -53,6 +53,22 @@
   font-size: 18px;
 }
 
+/* Interface language. Text, not an icon glyph: the Material Symbols subset in
+   index.html has no language icon, and an unlisted glyph renders as its own
+   name rather than a box. */
+#language-toggle {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+#language-toggle[data-language='zh-TW'] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 #tilt-map-view[aria-pressed='true'] {
   border-color: var(--accent);
   color: var(--accent);

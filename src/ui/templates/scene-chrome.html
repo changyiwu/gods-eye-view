@@ -10,7 +10,10 @@
   <!-- Title -->
   <div id="title-bar">
     <div class="title-glow"></div>
-    <h1><span class="title-logo brand-logo" data-logo-gaze data-logo-src="/logo.svg" aria-hidden="true"><img src="/logo.svg" alt="" /></span> <span>GOD'S EYE <span class="title-accent">VIEW</span></span></h1>
+    <!-- The product name is a name, not copy: data-gev-no-translate keeps the
+         interface translation pass off it, or "VIEW" reads as the cockpit
+         label it shares a word with. -->
+    <h1 data-gev-no-translate><span class="title-logo brand-logo" data-logo-gaze data-logo-src="/logo.svg" aria-hidden="true"><img src="/logo.svg" alt="" /></span> <span>GOD'S EYE <span class="title-accent">VIEW</span></span></h1>
     <p class="subtitle">NO PLACE LEFT BEHIND</p>
   </div>
 
@@ -38,6 +41,11 @@
     <button id="reset-globe-view" type="button" aria-label="Reset to full globe view" title="Reset camera and return to full globe view">
       <span class="material-symbols-outlined" aria-hidden="true">public</span>
     </button>
+    <!-- Interface language. Carries data-gev-no-translate because its own label
+         is the one string the translation pass must not touch: the button is
+         labelled by the language it switches TO, and src/i18n/languageToggle.js
+         already owns that copy in both languages. -->
+    <button id="language-toggle" type="button" data-gev-no-translate lang="zh-TW" aria-label="Switch interface language to Traditional Chinese" title="Switch interface language">中</button>
   </nav>
   <div id="global-loading-status" role="status" aria-live="polite" aria-atomic="true" hidden>
     <span id="global-loading-label">LOADING LIVE DATA</span>

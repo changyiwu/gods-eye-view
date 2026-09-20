@@ -743,5 +743,13 @@
   "src/director/interactions/interactions.test.mjs",
   "scripts/qa-director-interactions.mjs",
   "src/director/sharing/sharing.test.mjs",
-  "scripts/qa-director-sharing.mjs"
+  "scripts/qa-director-sharing.mjs",
+  "src/i18n/dictionary.js",
+  "src/i18n/translation.js",
+  "src/i18n/domLocalizer.js",
+  "src/i18n/languageToggle.js",
+  "src/i18n/index.js",
+  "src/i18n/translation.test.mjs",
+  "src/i18n/domLocalizer.test.mjs",
+  "src/i18n/languageToggle.test.mjs"
 ]
