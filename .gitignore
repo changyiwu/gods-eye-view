@@ -12,3 +12,8 @@ output/
 3d-models/
 pinokio/ENVIRONMENT
 pinokio/.installed
+
+# ── 本 fork 專屬 ──
+# 交接檔含真實電腦名與本機絕對路徑，不進這個 public fork。
+# 原本靠 .git/info/exclude 擋，但那是本機設定、不隨 git 走，clone 後就失效。
+handoff.md
