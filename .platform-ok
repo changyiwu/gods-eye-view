@@ -1,0 +1,8 @@
+# 刻意保留平台專屬寫法的檔案，由 cross-device-agent-skills/tools/check-platform.py 讀取。
+# 列在這裡的檔案整份跳過檢查（含 BOM），加進來之前先確認是「設計如此」不是「還沒改」。
+
+# 上游（bilawalsidhu/gods-eye-view，commit 94f5e4d / PR #508）的測試，用
+# `C:\Users\alice\...` 當假 fixture 模擬被 PowerShell 7 污染的 PSModulePath，
+# 不是真的本機路徑。因為是上游程式碼，不用行內 platform-ok 註解——那會跟上游分叉、
+# 將來同步容易衝突，改用整檔豁免。
+src/keySetupHardening.test.mjs
