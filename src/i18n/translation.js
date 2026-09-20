@@ -22,6 +22,12 @@ export const TRANSLATABLE_ATTRIBUTES = Object.freeze([
  * produce a Chinese icon — the ligature never forms and the element renders the
  * literal replacement text, which is exactly the failure mode index.html warns
  * about for the font subset.
+ *
+ * `.gev-flap-text` is the split-flap chip label, and that component identifies
+ * its own labels by comparing `textContent` against the string it set
+ * (src/splitFlap.js). Rewriting the node under it makes `settle()` conclude a
+ * newer label won the race and leave the flap cells stranded, and makes the
+ * idempotence check miss so every ticker update replays the whole cascade.
  */
 const OPAQUE_TAGS = new Set([
   'SCRIPT',
@@ -32,7 +38,28 @@ const OPAQUE_TAGS = new Set([
   'PRE',
   'SVG',
 ]);
-const OPAQUE_CLASSES = ['material-symbols-outlined'];
+const OPAQUE_CLASSES = ['material-symbols-outlined', 'gev-flap-text'];
+/**
+ * Class prefixes whose subtrees are left alone.
+ *
+ * Cesium's credit widget and its lightbox carry the attribution every data
+ * provider requires as a condition of use — provider names, licence names and
+ * their exact wording. That is a legal notice reproduced verbatim, not
+ * interface copy, so it stays in the language its provider published it in.
+ */
+const OPAQUE_CLASS_PREFIXES = ['cesium-credit', 'cesium-widget-credits'];
+
+/**
+ * The separator this interface builds composite readouts with.
+ *
+ * GEV joins status lines from independent pieces — `CelesTrak · never`,
+ * `MONITOR · RAW PRIOR · Upstream snapshot active`, `NORMAL · OFF · 4.0s` —
+ * and the DOM holds each line as ONE text node. Whole-string lookup can never
+ * match those, because the live half (a provider name, a duration, a bearing)
+ * changes constantly. Splitting on this separator translates the fixed pieces
+ * and leaves the live ones exactly as rendered.
+ */
+const SEGMENT_SEPARATOR = ' · ';
 
 /** Opt-out marker any surface can set to keep its subtree in the source copy. */
 export const SKIP_ATTRIBUTE = 'data-gev-no-translate';
@@ -64,8 +91,51 @@ export function isTranslatableElement(element) {
     if (element.hasAttribute(SKIP_ATTRIBUTE)) return false;
     if (element.getAttribute('contenteditable') === 'true') return false;
   }
-  const className = String(element.className || '');
-  return !OPAQUE_CLASSES.some((name) => className.split(/\s+/).includes(name));
+  const classNames = String(element.className || '').split(/\s+/);
+  if (OPAQUE_CLASSES.some((name) => classNames.includes(name))) return false;
+  return !classNames.some((name) =>
+    OPAQUE_CLASS_PREFIXES.some((prefix) => name.startsWith(prefix)),
+  );
+}
+
+/**
+ * Look one exact string up, with no segment handling.
+ *
+ * @param {string} value Rendered string.
+ * @param {object} strings Translation table.
+ * @returns {string|null} Translation, or null when none applies.
+ */
+function lookup(value, strings) {
+  const key = translationKey(value);
+  if (!key || !Object.hasOwn(strings, key)) return null;
+  const translated = strings[key];
+  return typeof translated === 'string' && translated !== key
+    ? translated
+    : null;
+}
+
+/**
+ * Translate a composite readout one segment at a time.
+ *
+ * An untranslated segment is kept exactly as it was rendered rather than
+ * whitespace-collapsed, so a live value passes through byte for byte. Returns
+ * null unless at least one segment actually moved — a line of pure live data
+ * must not be rewritten just because it happens to contain the separator.
+ *
+ * @param {string} value Rendered string.
+ * @param {object} strings Translation table.
+ * @returns {string|null} Rejoined line, or null when nothing applies.
+ */
+function translateSegments(value, strings) {
+  if (!value.includes(SEGMENT_SEPARATOR)) return null;
+  let changed = false;
+  const segments = value.split(SEGMENT_SEPARATOR).map((segment) => {
+    const translated = lookup(segment, strings);
+    if (translated === null) return segment;
+    changed = true;
+    return translated;
+  });
+  return changed ? segments.join(SEGMENT_SEPARATOR) : null;
 }
 
 /**
@@ -75,19 +145,21 @@ export function isTranslatableElement(element) {
  * caller can tell "no translation exists" from "translates to itself" and leave
  * live data (callsigns, place names, readouts) untouched.
  *
+ * A whole-string match wins outright. Only when there is none is the text
+ * treated as a composite readout and translated segment by segment, so a line
+ * the table knows in full is never taken apart.
+ *
  * @param {string} text Rendered text.
  * @param {object} [strings] English-keyed translation table.
  * @returns {string|null} Translated text, or null when nothing applies.
  */
 export function translate(text, strings) {
   if (!strings || typeof text !== 'string' || !text.trim()) return null;
-  const key = translationKey(text);
-  if (!Object.hasOwn(strings, key)) return null;
-  const translated = strings[key];
-  if (typeof translated !== 'string' || translated === key) return null;
-  const [, lead = '', , trail = ''] =
+  const [, lead = '', core = '', trail = ''] =
     text.match(/^(\s*)([\s\S]*?)(\s*)$/) || [];
-  return `${lead}${translated}${trail}`;
+  const translated =
+    lookup(core, strings) ?? translateSegments(core, strings) ?? null;
+  return translated === null ? null : `${lead}${translated}${trail}`;
 }
 
 /**

@@ -431,6 +431,82 @@ export const ZH_TW = Object.freeze({
 
   // ── Dock and voice ──────────────────────────
   'Navigation, voice, and visual preset controls': '導覽、語音與視覺預設控制',
+  'AI AGENT': 'AI 代理',
+  'ON/OFF': '開／關',
+  'VOICE STANDBY': '語音待命',
+  'VOICE CONTROL': '語音控制',
+  'Hold Space to speak · tap Space to activate focused controls':
+    '按住空白鍵說話 · 輕點空白鍵啟動聚焦中的控制項',
+  'VOICE SYSTEM ERROR': '語音系統錯誤',
+  'Check microphone permission and network access, then try again.':
+    '請檢查麥克風權限與網路連線後再試一次。',
+  DISMISS: '知道了',
+
+  // ── Provider Settings rows ──────────────────
+  // The provider NAMES stay as published (GOOGLE MAPS, OPENAI, CESIUM ION):
+  // they are what the operator types into a search box to find the console.
+  'GET KEY ↗': '取得金鑰 ↗',
+  'MANAGE ↗': '管理 ↗',
+  REMOVE: '移除',
+  'browser-side': '瀏覽器端',
+  'configured externally': '已於外部設定',
+  'The photorealistic 3D planet + place search': '擬真 3D 星球 ＋ 地點搜尋',
+  'Places context + Street View fallback; optional separate key':
+    '地點脈絡 ＋ 街景備援；可另用一把金鑰',
+  'Voice control — talk to the planet': '語音控制——對著這顆星球說話',
+  'Live ships, worldwide': '全球即時船舶',
+  'Live active-fire detections': '即時活躍火點偵測',
+  'Real live traffic (keyless runs a simulation)':
+    '真實即時車流（無金鑰時改跑模擬）',
+  'Bing imagery map stacks + world terrain': 'Bing 影像圖層組 ＋ 世界地形',
+  'More flight-polling credits (anonymous works without)':
+    '更多航班輪詢額度（不用金鑰也能匿名運作）',
+  'Higher space-missions request allowance': '更高的太空任務請求額度',
+
+  // ── Scene director ──────────────────────────
+  LOAD: '載入',
+  'EDIT DETAILS': '編輯細節',
+  'SHARE SCENE': '分享場景',
+
+  // ── Intelligence HUD ────────────────────────
+  'TOP SECRET // SI-TK // NOFORN': '最高機密 // SI-TK // 不得外傳',
+  SUMMARY: '摘要',
+  REC: '錄影',
+
+  // ── Composite readout segments ──────────────
+  // These are never whole text nodes: they arrive joined by " · " with live
+  // values (a provider name, a bearing, a duration) that must pass through.
+  never: '從未',
+  'just now': '剛剛',
+  LIVE: '即時',
+  'community mapped': '社群標記',
+  Local: '本機',
+  'CCTV + Street View fallback': 'CCTV ＋ 街景備援',
+  'OpenStreetMap + optional Google Maps Places':
+    'OpenStreetMap ＋ 選用 Google Maps Places',
+  'OSM routing': 'OSM 路徑規劃',
+  MONITOR: '監視平面',
+  'RAW PRIOR': '原始估計',
+  'Upstream snapshot active': '上游快照運作中',
+
+  // ── Toasts ──────────────────────────────────
+  'Link copied!': '連結已複製！',
+  'Copy failed': '複製失敗',
+  'Location not found': '找不到該地點',
+  'Search failed': '搜尋失敗',
+  'Fly to a POI first': '請先飛到一個地標',
+  'No selected data layers': '沒有已選取的資料圖層',
+  'Selected data layers could not be cleared': '無法清除已選取的資料圖層',
+  'CCTV calibration saved': 'CCTV 校正已儲存',
+  'CCTV calibration reset': 'CCTV 校正已重設',
+  'CCTV layer unavailable': 'CCTV 圖層無法使用',
+
+  // ── Cockpit columns and remaining labels ────
+  AIRCRAFT: '航空器',
+  FLT: '航班',
+  MIL: '軍機',
+  SIG: '訊號',
+  '📍 Location: --': '📍 位置：--',
 });
 
 /** Interface languages this fork ships, in toggle order. */
