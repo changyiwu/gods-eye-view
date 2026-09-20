@@ -53,6 +53,7 @@ gods-eye-view/
 ├── docs/             架構與子系統文件（APPLICATION、UI-OWNERSHIP、VOICE-OWNERSHIP…）
 ├── .github/          CI workflows、issue 範本、CODEOWNERS
 ├── .agents/skills/   專案內技能（community-pr）
+├── .platform-ok      ← 本 fork 新增：跨平台檢查器的整檔豁免清單（目前只有上游的 keySetupHardening.test.mjs）
 ├── index.html        入口
 └── vite.config.js
 ```
