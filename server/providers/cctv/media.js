@@ -514,3 +514,129 @@ export async function fetchCctvImageFromUpstream(
     controller.abort();
   }
 }
+
+/** Largest part header this will scan before giving up on a multipart body. */
+const MJPEG_PART_HEADER_MAX_BYTES = 4 * 1024;
+
+/**
+ * Read one JPEG out of a `multipart/x-mixed-replace` (MJPEG) part header.
+ *
+ * Returns how many bytes the part declares and where its payload starts, or
+ * null while the header is still incomplete.
+ *
+ * @param {Buffer} buffer Bytes received so far.
+ * @returns {{start:number,length:number}|null} Payload bounds, or null.
+ */
+export function readMjpegPartBounds(buffer) {
+  const separator = buffer.indexOf('\r\n\r\n');
+  if (separator < 0) return null;
+  const header = buffer.subarray(0, separator).toString('latin1');
+  if (!/content-type:\s*image\/jpeg/i.test(header)) return null;
+  const declared = /content-length:\s*(\d+)/i.exec(header);
+  if (!declared) return null;
+  return { start: separator + 4, length: Number(declared[1]) };
+}
+
+/**
+ * Drop the CRLF some encoders count inside a part's declared Content-Length.
+ *
+ * Taiwan's freeway cameras do this: a part declaring 25,091 bytes carries a
+ * 25,089-byte JPEG whose end-of-image marker is followed by `\r\n`. Decoders
+ * tolerate the tail, but a frame that ends after its EOI marker is the honest
+ * artifact — and byte-for-byte comparisons of stored frames stop depending on
+ * an encoder quirk.
+ *
+ * @param {Buffer} part Declared part payload.
+ * @returns {Buffer} Payload without trailing CR/LF padding.
+ */
+export function trimMjpegPartPadding(part) {
+  let end = part.length;
+  while (end > 0 && (part[end - 1] === 0x0d || part[end - 1] === 0x0a))
+    end -= 1;
+  return end === part.length ? part : part.subarray(0, end);
+}
+
+/**
+ * Snapshot a single frame from a live MJPEG stream.
+ *
+ * Taiwan's freeway cameras (and MJPEG cameras generally) publish an endless
+ * `multipart/x-mixed-replace` body rather than a still image, so
+ * `fetchCctvImageFromUpstream` rejects them on content type — correctly, since
+ * it would otherwise buffer a stream that never ends. This reads only as far
+ * as the first complete part and then drops the connection, which is what
+ * makes it safe to call on the per-request frame path.
+ *
+ * Each part declares its own `Content-Length`, so the payload boundary is read
+ * from the header rather than scanned for: no marker-hunting through JPEG
+ * entropy data, where a byte pair that looks like an end-of-image marker can
+ * appear inside the compressed scan.
+ *
+ * @param {string} url - Server-registered upstream stream URL.
+ * @param {object} [options]
+ * @param {typeof fetch} [options.fetchImpl=fetch] - Fetch implementation.
+ * @param {number} [options.timeoutMs=CCTV_FRAME_FETCH_TIMEOUT_MS] - Abort timeout.
+ * @param {number} [options.maxBytes=CCTV_FRAME_MAX_BODY_BYTES] - Frame byte cap.
+ * @returns {Promise<{ok:true,body:Buffer,contentType:string}|null>}
+ */
+export async function fetchMjpegSnapshot(
+  url,
+  {
+    fetchImpl = fetch,
+    timeoutMs = CCTV_FRAME_FETCH_TIMEOUT_MS,
+    maxBytes = CCTV_FRAME_MAX_BODY_BYTES,
+  } = {},
+) {
+  if (!url || !/^https?:\/\//i.test(url)) return null;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort(
+      new DOMException('CCTV MJPEG snapshot timed out', 'TimeoutError'),
+    );
+  }, timeoutMs);
+  try {
+    const upstream = await fetchWithinHost(
+      url,
+      {
+        headers: { 'User-Agent': cctvUpstreamUserAgent(url) },
+        signal: controller.signal,
+      },
+      fetchImpl,
+    );
+    if (!upstream) return null;
+    const contentType = upstream.headers.get('content-type') || '';
+    if (!upstream.ok || !/multipart\/x-mixed-replace/i.test(contentType))
+      return null;
+    if (!upstream.body?.[Symbol.asyncIterator]) return null;
+
+    let buffer = Buffer.alloc(0);
+    let bounds = null;
+    for await (const chunk of upstream.body) {
+      buffer = Buffer.concat([buffer, Buffer.from(chunk)]);
+      if (!bounds) {
+        bounds = readMjpegPartBounds(buffer);
+        // A body that never produces a usable part header must not be read
+        // forever just because it keeps sending bytes.
+        if (!bounds && buffer.length > MJPEG_PART_HEADER_MAX_BYTES) return null;
+        if (bounds && (!bounds.length || bounds.length > maxBytes)) return null;
+      }
+      if (bounds && buffer.length >= bounds.start + bounds.length) {
+        return {
+          ok: true,
+          body: trimMjpegPartPadding(
+            buffer.subarray(bounds.start, bounds.start + bounds.length),
+          ),
+          contentType: 'image/jpeg',
+        };
+      }
+      if (buffer.length > maxBytes) return null;
+    }
+    return null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+    // Dropping the connection is the point: the upstream would keep pushing
+    // frames for as long as it is held open.
+    controller.abort();
+  }
+}

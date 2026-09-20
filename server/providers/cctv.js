@@ -8,6 +8,7 @@ import {
   buildSyntheticCctvSvg,
   proxyMediaResponse,
   fetchCctvImageFromUpstream,
+  fetchMjpegSnapshot,
   fetchTxdotSnapshot,
   fetchCctvMediaUpstream,
   watchDownstreamClose,
@@ -357,10 +358,15 @@ export function cctvProxy({ sourceRoot = process.cwd() } = {}) {
             ? source?.url
             : '');
 
+        // An MJPEG source publishes an endless multipart body, not a still:
+        // the plain image fetch rejects it on content type, so one part is
+        // read off the stream instead.
         const upstreamImage =
           source?.sourceKind === 'txdot-its'
             ? await fetchTxdotSnapshot(upstreamCandidate)
-            : await fetchCctvImageFromUpstream(upstreamCandidate);
+            : normalizeFeedType(source?.feedType) === 'mjpeg'
+              ? await fetchMjpegSnapshot(upstreamCandidate)
+              : await fetchCctvImageFromUpstream(upstreamCandidate);
         if (upstreamImage?.ok) {
           setHealth(cameraId, {
             status: 'ok',

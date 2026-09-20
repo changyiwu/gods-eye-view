@@ -55,6 +55,13 @@ import {
   DEFAULT_CALGARY_MAX_SOURCES,
   CALGARY_DOWNTOWN,
   CALGARY_MAX_CATALOG_BYTES,
+  FREEWAY_TW_CCTV_URL,
+  FREEWAY_TW_STREAM_DOMAIN,
+  FREEWAY_TW_MAX_CATALOG_BYTES,
+  DEFAULT_FREEWAY_TW_MAX_SOURCES,
+  FREEWAY_TW_ANCHORS,
+  FREEWAY_TW_MOUNT_HEIGHT_M,
+  FREEWAY_TW_GROUND_ELEVATION_M,
   CCTV_SOURCE_FETCH_TIMEOUT_MS,
 } from './constants.js';
 import {
@@ -73,12 +80,16 @@ import {
   isLikelyTexasCoordinate,
   isLikelyNswCoordinate,
   isLikelyCalgaryCoordinate,
+  isLikelyTaiwanCoordinate,
   cameraDisplayCode,
   rowArrayToObject,
   prioritizeSources,
 } from './normalize.js';
 import { directionToHeading } from '../../../src/data/directionText.js';
-import { readResponseJsonCapped } from '../common/http.js';
+import {
+  readCappedResponseText,
+  readResponseJsonCapped,
+} from '../common/http.js';
 /**
  * Fetch and parse Austin traffic camera records from the city Open Data portal.
  *
@@ -1589,6 +1600,202 @@ export async function loadCalgarySourcesFromOpenData() {
   } catch (error) {
     console.warn(
       '[CCTV] Calgary camera download error:',
+      error?.message || error,
+    );
+    return [];
+  }
+}
+
+/** MOTC20 `RoadDirection` carries a bare cardinal letter, which the shared
+ * `directionToHeading` deliberately does not read (a bare cardinal inside
+ * free-form text is usually a street name, not a facing). Here the field IS
+ * dedicated, so the letters are mapped directly. */
+const FREEWAY_TW_DIRECTION_HEADINGS = Object.freeze({
+  N: 0,
+  E: 90,
+  S: 180,
+  W: 270,
+});
+
+/** Pull the first text value of `<tag>` out of one `<CCTV>` block. */
+function freewayTwField(block, tag) {
+  const match = new RegExp(`<${tag}>(.*?)</${tag}>`, 's').exec(block);
+  return match ? match[1].trim() : '';
+}
+
+/**
+ * Parse the MOTC20 freeway CCTV catalogue into flat records.
+ *
+ * Regex rather than an XML parser, for the same reason the Tarktee DATEX
+ * loader does it: this repository ships no XML dependency, and the document is
+ * a flat, machine-generated list of one element type.
+ *
+ * @param {string} xml Raw catalogue body.
+ * @returns {Array<object>} One record per `<CCTV>` element, unvalidated.
+ */
+export function parseFreewayTwCctvXml(xml) {
+  const text = typeof xml === 'string' ? xml : '';
+  const blocks = text.match(/<CCTV>[\s\S]*?<\/CCTV>/g) || [];
+  return blocks.map((block) => ({
+    cctvId: freewayTwField(block, 'CCTVID'),
+    streamUrl: freewayTwField(block, 'VideoStreamURL'),
+    lat: toFiniteNumber(freewayTwField(block, 'PositionLat')),
+    lon: toFiniteNumber(freewayTwField(block, 'PositionLon')),
+    roadName: freewayTwField(block, 'RoadName'),
+    roadDirection: freewayTwField(block, 'RoadDirection'),
+    locationMile: freewayTwField(block, 'LocationMile'),
+    sectionStart: freewayTwField(block, 'Start'),
+    sectionEnd: freewayTwField(block, 'End'),
+  }));
+}
+
+/**
+ * Human label for a freeway camera.
+ *
+ * The catalogue has no camera name, only where it is: road, milepost and the
+ * interchange span it sits in. That reads better than the raw CCTVID, and it
+ * is what the roadside signage says.
+ *
+ * @param {object} [record] Parsed catalogue record.
+ * @returns {string} Display label, or '' when there is nothing to say.
+ */
+export function freewayTwCameraLabel(record = {}) {
+  const road = String(record.roadName || '').trim();
+  const mile = String(record.locationMile || '').trim();
+  const start = String(record.sectionStart || '').trim();
+  const end = String(record.sectionEnd || '').trim();
+  const span = start && end ? `${start}－${end}` : start || end;
+  const head = [road, mile].filter(Boolean).join(' ');
+  if (head && span) return `${head}（${span}）`;
+  return head || span || '';
+}
+
+/**
+ * Map one catalogue record to a registered camera source.
+ *
+ * @param {object} [record] Parsed catalogue record.
+ * @returns {object|null} Source object, or null when the row is unusable.
+ */
+export function freewayTwCctvToSource(record = {}) {
+  const cctvId = String(record.cctvId || '').trim();
+  if (!cctvId) return null;
+  const { lat, lon } = record;
+  if (!isLikelyTaiwanCoordinate(lat, lon)) return null;
+
+  // Host pin: https inside freeway.gov.tw. A row naming any other authority is
+  // dropped rather than registered, because registration is what authorises
+  // the frame proxy to fetch a URL at all.
+  let streamUrl;
+  try {
+    streamUrl = new URL(String(record.streamUrl || ''));
+  } catch {
+    return null;
+  }
+  if (streamUrl.protocol !== 'https:') return null;
+  if (
+    streamUrl.hostname !== FREEWAY_TW_STREAM_DOMAIN &&
+    !streamUrl.hostname.endsWith(`.${FREEWAY_TW_STREAM_DOMAIN}`)
+  )
+    return null;
+
+  // RoadDirection is the carriageway's travel direction, and a gantry camera
+  // looks along it — a good prior, but it is inferred from the road rather
+  // than measured, so it stays low confidence and the operator can drag it.
+  const directed =
+    FREEWAY_TW_DIRECTION_HEADINGS[
+      String(record.roadDirection || '')
+        .trim()
+        .toUpperCase()
+    ];
+  const hasDirection = Number.isFinite(directed);
+  const headingDeg = hasDirection ? directed : fallbackHeadingFromId(cctvId);
+
+  return {
+    id: `tw-freeway-${cctvId}`,
+    name: freewayTwCameraLabel(record) || cctvId,
+    city: String(record.roadName || '').trim() || 'Taiwan Freeway',
+    cityId: 'taiwan-freeway',
+    provider: '交通部高速公路局',
+    lat,
+    lon,
+    headingDeg,
+    headingConfidence: 'low',
+    pitchDeg: -12,
+    fovDeg: 48,
+    rangeM: 320,
+    mountHeightM: FREEWAY_TW_MOUNT_HEIGHT_M,
+    groundElevationM: FREEWAY_TW_GROUND_ELEVATION_M,
+    feedType: 'mjpeg',
+    url: streamUrl.href,
+    snapshotUrl: streamUrl.href,
+    sourceKind: 'freeway-tw-motc',
+    license:
+      'Public freeway camera feed — 交通部高速公路局 (TISVCloud), 政府資料開放授權條款第1版',
+  };
+}
+
+/**
+ * Fetch Taiwan national freeway cameras from the MOTC20 TISVCloud catalogue.
+ *
+ * Keyless, one document for the whole island (~1,870 cameras). Streams are
+ * live MJPEG rather than still images, which the frame route snapshots by
+ * reading a single part off the multipart body (see `fetchMjpegSnapshot`).
+ *
+ * @returns {Promise<Array<object>>} Normalized camera source objects.
+ */
+export async function loadFreewayTwSourcesFromMotc() {
+  const endpoint = process.env.CCTV_FREEWAY_TW_URL || FREEWAY_TW_CCTV_URL;
+  try {
+    const resp = await fetch(endpoint, {
+      headers: { Accept: 'application/xml,text/xml,*/*' },
+      signal: AbortSignal.timeout(CCTV_SOURCE_FETCH_TIMEOUT_MS),
+    });
+    if (!resp.ok) {
+      console.warn('[CCTV] Taiwan freeway catalogue failed:', resp.status);
+      return [];
+    }
+    const { tooLarge, text } = await readCappedResponseText(
+      resp,
+      FREEWAY_TW_MAX_CATALOG_BYTES,
+    );
+    if (tooLarge) {
+      console.warn('[CCTV] Taiwan freeway catalogue exceeded size cap');
+      return [];
+    }
+    const cameras = [];
+    for (const record of parseFreewayTwCctvXml(text)) {
+      const source = freewayTwCctvToSource(record);
+      if (source) cameras.push(source);
+    }
+    if (!cameras.length) {
+      console.warn('[CCTV] Taiwan freeway catalogue parsed empty');
+      return [];
+    }
+
+    const unique = Array.from(
+      new Map(cameras.map((camera) => [camera.id, camera])).values(),
+    );
+    const maxRaw = Number(
+      process.env.CCTV_FREEWAY_TW_MAX_SOURCES || DEFAULT_FREEWAY_TW_MAX_SOURCES,
+    );
+    const maxCount = Number.isFinite(maxRaw)
+      ? Math.max(8, Math.min(400, Math.floor(maxRaw)))
+      : DEFAULT_FREEWAY_TW_MAX_SOURCES;
+    const prioritized = prioritizeSources(unique, maxCount, FREEWAY_TW_ANCHORS);
+    if (prioritized.length < unique.length) {
+      console.log(
+        `[CCTV] Loaded Taiwan freeway camera sources: ${unique.length} (using nearest ${prioritized.length})`,
+      );
+    } else {
+      console.log(
+        '[CCTV] Loaded Taiwan freeway camera sources:',
+        prioritized.length,
+      );
+    }
+    return prioritized;
+  } catch (error) {
+    console.warn(
+      '[CCTV] Taiwan freeway catalogue error:',
       error?.message || error,
     );
     return [];

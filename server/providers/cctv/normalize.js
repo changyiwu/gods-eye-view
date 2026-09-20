@@ -356,6 +356,27 @@ export function isLikelyNswCoordinate(lat, lon) {
   );
 }
 
+/**
+ * Whether a coordinate falls inside Taiwan's main island.
+ *
+ * Deliberately excludes Kinmen, Matsu and the Pratas: the freeway network does
+ * not reach them, so a row landing there is a bad coordinate, not an outlying
+ * camera.
+ *
+ * @param {number} lat Latitude.
+ * @param {number} lon Longitude.
+ * @returns {boolean} True when the point is plausibly on Taiwan proper.
+ */
+export function isLikelyTaiwanCoordinate(lat, lon) {
+  return (
+    isPlausibleLatLon(lat, lon) &&
+    lat >= 21.85 &&
+    lat <= 25.35 &&
+    lon >= 119.9 &&
+    lon <= 122.05
+  );
+}
+
 /** Calgary's municipal extent, with slack for the ring road. */
 export function isLikelyCalgaryCoordinate(lat, lon) {
   return (

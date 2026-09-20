@@ -236,6 +236,36 @@ export const CALGARY_DOWNTOWN = { lat: 51.0461, lon: -114.0626 };
  * body cannot be buffered without limit. */
 export const CALGARY_MAX_CATALOG_BYTES = 4 * 1024 * 1024;
 
+/** Taiwan national freeway cameras, published by the Freeway Bureau (MOTC)
+ * through TISVCloud. Keyless: one MOTC20-standard XML catalogue of ~1,870
+ * cameras carrying WGS84 coordinates and a live MJPEG stream URL each. */
+export const FREEWAY_TW_CCTV_URL =
+  'https://tisvcloud.freeway.gov.tw/history/motc20/CCTV.xml';
+/** The catalogue spreads its streams over one host per operating region
+ * (cctvn / cctvc / cctvs / cctvn5, and the bureau adds more as the network
+ * grows), so the pin is the DOMAIN rather than a fixed host list: https, and
+ * a hostname inside freeway.gov.tw. A stray row naming another authority —
+ * the catalogue currently carries exactly one, on thb.gov.tw — is dropped
+ * rather than silently widening what the frame proxy will fetch. */
+export const FREEWAY_TW_STREAM_DOMAIN = 'freeway.gov.tw';
+/** The catalogue is ~1.2 MB of XML for the whole island. This cap only bounds
+ * a body that streams without end; it is not a row limit. */
+export const FREEWAY_TW_MAX_CATALOG_BYTES = 8 * 1024 * 1024;
+export const DEFAULT_FREEWAY_TW_MAX_SOURCES = 220;
+/** Prioritization anchors: the four metropolitan areas the freeway network
+ * actually converges on, west coast first (that is where the cameras are). */
+export const FREEWAY_TW_ANCHORS = [
+  { lat: 25.033, lon: 121.5654 }, // Taipei
+  { lat: 24.1477, lon: 120.6736 }, // Taichung
+  { lat: 22.6273, lon: 120.3014 }, // Kaohsiung
+  { lat: 24.8138, lon: 120.9675 }, // Hsinchu
+];
+/** Freeway gantry cameras sit on overhead sign structures, not street poles. */
+export const FREEWAY_TW_MOUNT_HEIGHT_M = 9;
+/** Western-corridor plain elevation. The catalogue carries no elevation, and
+ * the ground resolver refines this per camera once terrain is available. */
+export const FREEWAY_TW_GROUND_ELEVATION_M = 30;
+
 /** Camera CATALOGS change rarely; 15 min keeps multi-megabyte upstream list refetches (Austin rows.json + 4 Caltrans districts + TfL + Ontario 511) infrequent. Frames are fetched per-request and are unaffected. */
 export const CCTV_SOURCE_CACHE_MS = 15 * 60 * 1000;
 /** Per-provider catalog-fetch timeout. Bounds the worst-case refresh so one

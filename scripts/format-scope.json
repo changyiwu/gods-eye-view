@@ -751,5 +751,6 @@
   "src/i18n/index.js",
   "src/i18n/translation.test.mjs",
   "src/i18n/domLocalizer.test.mjs",
-  "src/i18n/languageToggle.test.mjs"
+  "src/i18n/languageToggle.test.mjs",
+  "src/data/cctvFreewayTwSource.test.mjs"
 ]
