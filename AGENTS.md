@@ -75,7 +75,7 @@ gods-eye-view/
 - **UI 改動先讀 [docs/UI-OWNERSHIP.md](docs/UI-OWNERSHIP.md)**，語音相關先讀 [docs/VOICE-OWNERSHIP.md](docs/VOICE-OWNERSHIP.md)——這個 repo 對「哪個模組擁有哪塊 UI」有明確規範。
 - **CCTV 台灣國道包預設載入 220 支**（全量約 1,850），以台北／台中／高雄／新竹為錨點就近挑選，沙鹿周邊會拿到 29 支。要更多設 `CCTV_FREEWAY_TW_MAX_SOURCES`（上限 400）。
 - **追上游流程**：`git fetch upstream && git merge upstream/main`。合併後務必重跑 `npm test`，並確認在地化字串沒有被上游改動覆蓋。
-- **`handoff.md` 不進 repo**：本專案是 **public fork**，且會持續 merge upstream。為避免污染 upstream 的 `.gitignore` 造成每次合併衝突，`handoff.md` 改以本機的 `.git/info/exclude` 忽略（效果相同，不進版控）。
+- **`handoff.md` 不進 repo**：本專案是 **public fork**，且會持續 merge upstream。`handoff.md` 列在 `.gitignore` **檔尾的「本 fork 專屬」區段**。2026-09-20 從 `.git/info/exclude` 改過來——後者是本機設定、**不隨 git 走**，換電腦 clone 後就失效，而這個 repo 是公開的，漏進去就推上去了。放檔尾是為了避開上游常改動的區段，把 merge 衝突面降到最低。
 - **本專案不在雲端硬碟**（路徑為 `C:\dev\gods-eye-view`），故 `handoff.md` **不會自動跨電腦同步**。換電腦接手請以 Obsidian（L3）的〈專案工作流程〉為準。
 
 ## 同步層級（本專案初始化至第 3 層級）
@@ -104,7 +104,7 @@ gods-eye-view/
 ## 工作約定
 
 - 任何 Agent、任何電腦：**開工先讀 `handoff.md`，收工必更新 `handoff.md`**
-- `handoff.md` **不進 git**（含真實電腦名與本機絕對路徑），已列入本機 `.git/info/exclude`——不要把它加回版控
+- `handoff.md` **不進 git**（含真實電腦名與本機絕對路徑），已列入 `.gitignore`——不要把它加回版控
 - 修改共用檔案前先讀最新內容，避免覆蓋其他 Agent 的變更
 - 所有回應與文件使用繁體中文
 - 修改前先確認計畫，優先保留原有資料結構
