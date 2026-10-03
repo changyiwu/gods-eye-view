@@ -1,7 +1,7 @@
 # God's Eye View（繁中在地化 fork）（專案藍圖）
 
 > 本檔為跨 Agent 通用的專案藍圖（AGENTS.md 開放標準）。任何 Agent 的每個 session 都應先讀本檔＋`handoff.md`。
-> Claude Code 預設只在沒有 `CLAUDE.md` 時才讀 `AGENTS.md`，故由 `CLAUDE.md` 的 `@AGENTS.md` import 本檔；Claude 專屬規範寫在 `CLAUDE.md`。
+> Claude Code 預設只在沒有 `CLAUDE.md` 時才讀 `AGENTS.md`，故由 `CLAUDE.md` 的 `@AGENTS.md` import 本檔（`CLAUDE.md` 只有這一行）；Claude 專屬規範寫在本檔〈Claude Code 專屬〉一節。
 
 ## 專案簡介
 
@@ -111,3 +111,8 @@ gods-eye-view/
 - 修改前先確認計畫，優先保留原有資料結構
 - **直接在 `main` 上開發，不開功能分支**（使用者決定）。因此：合上游前先把手上的東西 commit 掉；用 `git merge upstream/main` 而非 rebase（public fork，改寫歷史要強制推送）；要看哪些 commit 是自己的，用 `git log --oneline upstream/main..main`
 - **含正規表示式的程式碼一律用 Write/Edit 工具寫，不要用 heredoc**（`cat > file <<'EOF'` 會吃掉一層反斜線，`[\s\S]` 變成 `[sS]`，而且症狀極隱蔽）
+
+## Claude Code 專屬
+
+- 這個 repo 有 640 個 `.js`、325 個 `.test.mjs`，直接全域搜尋很容易吃掉 context。找東西優先用 `Grep`／`Glob` 收斂路徑，不要整包 `Read`。
+- 動到 `src/ui/` 或 `src/voice/` 之前，先讀對應的 `docs/UI-OWNERSHIP.md`／`docs/VOICE-OWNERSHIP.md`，再進 plan mode 確認計畫。
